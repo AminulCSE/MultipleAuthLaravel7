@@ -1,0 +1,93 @@
+User Model use this code:------
+	public function user(){
+        	return $this->hasMany('App\User');
+    	}
+
+Role Model use this code:------
+	public function role(){
+        	return $this->belongsTo('App\User');
+    	}
+
+
+-----------------------Make Middleware---------------------------
+	1. php artisan make:middleware AdminMiddleware
+	2. php artisan make:middleware UserMiddleware
+
+#now protected kernel.php file to integrate those MiddleWare
+	'admin' => \App\Http\Middleware\AdminMiddleware::class,
+        'user' => \App\Http\Middleware\UserMiddleware::class,
+
+------------------Now add below text admin middleware and user middleware-----------
+	use Illuminate\Support\Facades\Auth;
+1. add into AdminMiddleware::   
+	if(Auth::check() && Auth::user()->role_id == 1){
+		return $next($request);
+	}else{
+		return redirect()->route('login);
+	}
+
+2. add into UserMiddleware::   
+	if(Auth::check() && Auth::user()->role_id == 1){
+		return $next($request);
+	}else{
+		return redirect()->route('login);
+	}
+
+
+--------------then add RedirectIfAuthenticated.php-----------
+	if (Auth::guard($guard)->check() && Auth::user()->role->id == 1) {
+            return redirect()->route('admin.dashboard');
+        }elseif(Auth::guard($guard)->check() && Auth::user()->role_id==2){
+            return redirect()->route('user.dashboard');
+        }else{
+            return $next($request);
+        }
+
+------------------Now created two controller--------------
+php artisan make:controller Admin/AdminController
+php artisan make:controller User/UserController
+
+--------------Now add the code into web.php/ route file----------------
+use Illuminate\Support\Facades\Auth;
+
+Route::group(['prefix'=>'admin', 'middleware'=>['admin', 'auth'], 'namespace'=>'admin'], function(){
+	Route::get('dashboard', 'AdminController@index')->name('admin.dashboard');
+});
+
+
+---------------------Go to login controller and past the code below-------------------
+*. After the code into LoginController
+	protected $redirectTo = RouteServiceProvider::HOME;
+
+	protected function redirectTo(){
+		if(Auth()->user()->role_id == 1){
+			return route('admin.dashboard');
+		}elseif(Auth()->user()->role_id == 2){
+			return route('user.dashboard');
+		}
+	}
+
+
+	** USE THIS CODE IN THE RegisterController when i create a user
+		protected function create(array $data)
+    		{
+        		return User::create([
+            		'name' => $data['name'],
+            		'role_id' => 2,
+            		'email' => $data['email'],
+            		'password' => Hash::make($data['password']),
+        		]);
+    		}
+
+
+------------------Also use the code into registerController------------------
+
+	protected $redirectTo = RouteServiceProvider::HOME;
+
+	protected function redirectTo(){
+		if(Auth()->user()->role_id == 1){
+			return route('admin.dashboard');
+		}elseif(Auth()->user()->role_id == 2){
+			return route('user.dashboard');
+		}
+	}
